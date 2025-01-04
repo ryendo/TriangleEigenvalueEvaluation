@@ -1,0 +1,19 @@
+format compact long _
+close all
+
+
+% INTERVAL_MODE=0;
+% f = @(x)(I_minus_Ai(x))
+% x = linspace(0,10);
+% plot(x,mid(f(x)),x,0*x)
+% title('sin(x)+cos(x/2)+x/5  in  [-20,15]')
+
+INTERVAL_MODE=1;
+f = @(x)(I_minus_Ai(x));
+% f = @(x)(I_besselj(3/2,x));
+% f = @(x)(x^2-2);
+
+tic
+X = infsup(2,3);
+[L,Ls] = verifynlssall(f,X)
+toc
