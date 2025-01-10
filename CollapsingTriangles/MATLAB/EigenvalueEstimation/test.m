@@ -1,7 +1,13 @@
-syms t s
-K = [s^2 + 1/t,   s*t;
-     t + 1/s,     2*t^3];
-M = [  s*t,       3*s + 1/t^2;
-      4*s^3,      s*t^2];
 
-[fctr, Kscaled, Mscaled] = normalizeMatrices(K, M)
+% Define symbolic variables
+syms t;
+K = matlabFunction(t^(sym(4)/sym(3)));
+% Substitute t with intval('0.1')
+t_val = intval('0.1');
+K_eval = K(t_val);
+
+
+% K_original = @(t)t.^(4.0./3.0); % 元の関数ハンドル
+% K_modified = @(t)K_original(intval(t)); % t と内部定数を自動的に intval に変換
+% t_val = intval(0.1);
+% K_modified(t_val)

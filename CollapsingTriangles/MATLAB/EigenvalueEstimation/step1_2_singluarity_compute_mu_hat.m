@@ -84,10 +84,10 @@ else
     %     (x - a_left_sym) * (a_right_sym - x) * a*(x - c_sym(i)), ...
     %     [x, i] ...
     % );
-    % phi_sym = symfun( ...
-    %     (x - a_left_sym) * (a_right_sym - x) * exp(-a*(x - c_sym(i))^2), ...
-    %     [x, i] ...  
-    % );
+    phi_sym = symfun( ...
+        (x - a_left_sym) * (a_right_sym - x) * exp(-(x - c_sym(idx1))^2), ...
+        [x, idx1] ...  
+    );
     % phi_sym = symfun( ...
     % piecewise( ...
     %     x >= c_sym(i-1) & x < c_sym(i), ...
@@ -98,8 +98,8 @@ else
     % ), ...
     % [x, i] ...
     % );
-    phi_sym = symfun( (x - a_left_sym) .* (a_right_sym - x) .* x.^(i-1),[x,i]);
-    % phi_sym = symfun((x - a_left_sym).^(i+1) .* (a_right_sym - x).^(i+1),[x,i]);
+    % phi_sym = symfun( (x - a_left_sym) .* (a_right_sym - x) .* x.^(i-1),[x,i]);
+    % phi_sym = symfun((x - a_left_sym).^(i-1) .* (a_right_sym - x).^(N-i+1),[x,i]);
 
     % phi_sym = symfun( ...
     % (x - a_left_sym) .* (a_right_sym - x) .* ...
@@ -126,56 +126,70 @@ else
     % );
     % %%%%%%%%%%%%
     
-    dphi_sym = symfun( diff(phi_sym(x,i), x), [x, i]);
+    dphi_sym = symfun( diff(phi_sym(x,idx1), x), [x, idx1]);
 
     % For i, j in {1..N}, define integrals for K, M
     K_mat_sym = sym(zeros(N,N));
     M_mat_sym = sym(zeros(N,N));
 
-    for iInd = 1:N
-        for jInd = iInd:N  % exploit symmetry
+    phi_i_expr  = simplify(phi_sym(x, iInd));
+    phi_j_expr  = simplify(phi_sym(x, jInd));
+    dphi_i_expr = simplify(dphi_sym(x, iInd));
+    dphi_j_expr = simplify(dphi_sym(x, jInd));
 
-            phi_i_expr  = simplify(phi_sym(x, iInd));
-            phi_j_expr  = simplify(phi_sym(x, jInd));
-            dphi_i_expr = simplify(dphi_sym(x, iInd));
-            dphi_j_expr = simplify(dphi_sym(x, jInd));
+    % phi_i_expr  = phi_sym(x, iInd);
+    % phi_j_expr  = phi_sym(x, jInd);
+    % dphi_i_expr = dphi_sym(x, iInd);
+    % dphi_j_expr = dphi_sym(x, jInd);
 
-            integrand_K_left  = simplify(dphi_i_expr .* dphi_j_expr + V_minus_sym.*phi_i_expr.*phi_j_expr);
-            integrand_K_right = simplify(dphi_i_expr .* dphi_j_expr + V_plus_sym .*phi_i_expr.*phi_j_expr);
-            integrand_M_left  = simplify(phi_i_expr.*phi_j_expr);
-            integrand_M_right = simplify(phi_i_expr.*phi_j_expr);
+    integrand_K_left  = simplify(dphi_i_expr .* dphi_j_expr + V_minus_sym.*phi_i_expr.*phi_j_expr);
+    integrand_K_right = simplify(dphi_i_expr .* dphi_j_expr + V_plus_sym .*phi_i_expr.*phi_j_expr);
+    integrand_M_left  = simplify(phi_i_expr.*phi_j_expr);
+    integrand_M_right = simplify(phi_i_expr.*phi_j_expr);
 
-            K_left  = int(integrand_K_left,  x, a_left_sym,  x_split_sym);
-            K_right = int(integrand_K_right, x, x_split_sym, a_right_sym);
-            M_left  = int(integrand_M_left,  x, a_left_sym,  x_split_sym);
-            M_right = int(integrand_M_right, x, x_split_sym, a_right_sym);
+    % integrand_K_left  = dphi_i_expr .* dphi_j_expr + V_minus_sym.*phi_i_expr.*phi_j_expr;
+    % integrand_K_right = dphi_i_expr .* dphi_j_expr + V_plus_sym .*phi_i_expr.*phi_j_expr;
+    % integrand_M_left  = phi_i_expr.*phi_j_expr;
+    % integrand_M_right = phi_i_expr.*phi_j_expr;
 
-            valK = simplify(K_left + K_right);
-            valM = simplify(M_left + M_right);
+    K_left  = int(integrand_K_left,  x, a_left_sym,  x_split_sym);
+    K_right = int(integrand_K_right, x, x_split_sym, a_right_sym);
+    M_left  = int(integrand_M_left,  x, a_left_sym,  x_split_sym);
+    M_right = int(integrand_M_right, x, x_split_sym, a_right_sym);
 
-            K_mat_sym(iInd,jInd) = valK;
-            K_mat_sym(jInd,iInd) = valK;  % symmetric
-            M_mat_sym(iInd,jInd) = valM;
-            M_mat_sym(jInd,iInd) = valM;
+    valK = simplify(K_left + K_right);
+    valM = simplify(M_left + M_right);
+
+    for iInd_val = 1:N
+        for jInd_val = iInd_val:N  % exploit symmetry
+
+            % valK = rewrite(valK, 'erf');
+            % valM = rewrite(valM, 'erf');
+
+            % valK = K_left + K_right;
+            % valM = M_left + M_right;
+
+            K_mat_sym(iInd_val,jInd_val) = subs(valK, [iInd, jInd], [iInd_val, jInd_val]);
+            K_mat_sym(jInd_val,iInd_val) = subs(valK, [iInd, jInd], [iInd_val, jInd_val]);  % symmetric
+            M_mat_sym(iInd_val,jInd_val) = subs(valM, [iInd, jInd], [iInd_val, jInd_val]);
+            M_mat_sym(jInd_val,iInd_val) = subs(valM, [iInd, jInd], [iInd_val, jInd_val]);
         end
     end
-
-    K_mat_sym = t^20*K_mat_sym;
-    M_mat_sym = t^20*M_mat_sym;
 
     % [commonFactor, K_mat_sym, M_mat_sym] = normalizeMatrices(K_mat_sym,M_mat_sym);
     % [commonFactor, K_mat_sym, M_mat_sym] = normalizeMatrices(K_mat_sym,M_mat_sym);
 
     % factor = K_mat_sym(N,N);
-    % K_mat_sym=K_mat_sym/factor;
-    % M_mat_sym=M_mat_sym/factor;
+    % K_mat_sym=K_mat_sym*t^23;
+    % M_mat_sym=M_mat_sym*t^23;
 
-    K_sym = matlabFunction(K_mat_sym,'Vars',[a,sigma,t]);
-    M_sym = matlabFunction(M_mat_sym,'Vars',[a,sigma,t]);
+    K_sym = matlabFunction(K_mat_sym,'Vars',[a,s,t]);
+    M_sym = matlabFunction(M_mat_sym,'Vars',[a,s,t]);
 
     fprintf('Saving symbolic integrals to file: %s\n', symFilename);
     save(symFilename);
 end
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 2) Build numeric interval matrices, solve eigenvalue problem

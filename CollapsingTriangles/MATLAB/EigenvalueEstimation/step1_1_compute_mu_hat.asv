@@ -7,7 +7,7 @@ format compact short infsup
 clear
 
 % ---------------- NEW: set N as a numeric integer ----------------
-N = 11;  % for example
+N = 10;  % for example
 
 % Symbolic variables: i, j, plus t, s (but NOT N)
 syms i j t s a real
@@ -17,11 +17,14 @@ assume(t > 0);
 assume(abs(s) < 1);
 
 % We will store them in one file, e.g. "K_M_sym_withN.mat"
-symFilename = 'upper_bound_matrix/K_M_sym_withN_11_xi.mat';
+symFilename = 'upper_bound_matrix/K_M_sym_withN_5_xi_NN_mfacnn.mat';
 
 if exist(symFilename, 'file')
     fprintf('Loading symbolic integrals from file: %s\n', symFilename);
     load(symFilename);
+% if false
+%     fprintf('Loading symbolic integrals from file: %s\n', symFilename);
+%     load(symFilename);
 else
     fprintf('No existing symbolic integrals file. Building them now...\n');
 
@@ -120,45 +123,13 @@ else
     %     [x, i] ...
     % );
     % %%%%%%%%%%%%
-    
-    dphi_sym = symfun( diff(phi_sym(x,i), x), [x, i]);
 
-    % For i, j in {1..N}, define integrals for K, M
-    K_mat_sym = sym(zeros(N,N));
-    M_mat_sym = sym(zeros(N,N));
-
-    for iInd = 1:N
-        for jInd = iInd:N  % exploit symmetry
-
-            phi_i_expr  = simplify(phi_sym(x, iInd));
-            phi_j_expr  = simplify(phi_sym(x, jInd));
-            dphi_i_expr = simplify(dphi_sym(x, iInd));
-            dphi_j_expr = simplify(dphi_sym(x, jInd));
-
-            integrand_K_left  = simplify(dphi_i_expr .* dphi_j_expr + V_minus_sym.*phi_i_expr.*phi_j_expr);
-            integrand_K_right = simplify(dphi_i_expr .* dphi_j_expr + V_plus_sym .*phi_i_expr.*phi_j_expr);
-            integrand_M_left  = simplify(phi_i_expr.*phi_j_expr);
-            integrand_M_right = simplify(phi_i_expr.*phi_j_expr);
-
-            K_left  = int(integrand_K_left,  x, a_left_sym,  x_split_sym);
-            K_right = int(integrand_K_right, x, x_split_sym, a_right_sym);
-            M_left  = int(integrand_M_left,  x, a_left_sym,  x_split_sym);
-            M_right = int(integrand_M_right, x, x_split_sym, a_right_sym);
-
-            valK = simplify(K_left + K_right);
-            valM = simplify(M_left + M_right);
-
-            
-
-            K_mat_sym(iInd,jInd) = valK;
-            K_mat_sym(jInd,iInd) = valK;  % symmetric
-            M_mat_sym(iInd,jInd) = valM;
-            M_mat_sym(jInd,iInd) = valM;
-        end
-    end
-
-    
     % [commonFactor, K_mat_sym, M_mat_sym] = normalizeMatrices(K_mat_sym,M_mat_sym);
+    % [commonFactor, K_mat_sym, M_mat_sym] = normalizeMatrices(K_mat_sym,M_mat_sym);
+
+    % factor = K_mat_sym(N,N);
+    % K_mat_sym=K_mat_sym/factor;
+    % M_mat_sym=M_mat_sym/factor;
 
     K_sym = matlabFunction(K_mat_sym,'Vars',[a,s,t]);
     M_sym = matlabFunction(M_mat_sym,'Vars',[a,s,t]);
@@ -175,8 +146,7 @@ fprintf('\nWe have N=%d from the code.\n', N);
 
 a_val = intval(1);
 t_val  = intval(2*tan(pi/18));
-% t_val  = intval(0.13);
-s_val  = intval(0.4);
+s_val  = intval(0.1);
 
 fprintf('\nBuilding K_mat, M_mat for N=%d\n', N);
 
